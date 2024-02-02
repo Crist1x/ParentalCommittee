@@ -20,6 +20,7 @@ async def not_must_func(message: Message, state: FSMContext, bot: Bot):
     await state.update_data(must="Необязательно")
     all_data = await state.get_data()
 
+
     await task_write(all_data, state, bot, message)
 
 
