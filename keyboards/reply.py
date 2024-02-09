@@ -11,4 +11,7 @@ greeting_admin = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text="Помощь")]
     ], resize_keyboard=True)
 
+back = ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text="В меню")]
+    ], resize_keyboard=True)
 

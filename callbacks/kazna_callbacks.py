@@ -9,22 +9,24 @@ from aiogram.utils.markdown import hbold, hitalic
 from keyboards.reply import greeting_admin
 
 
+# Если цель обязательна
 async def must_func(message: Message, state: FSMContext, bot: Bot):
     await state.update_data(must="Обязательно")
     all_data = await state.get_data()
 
-    await task_write(all_data, state, bot, message)
+    await task_confirm(all_data, state, bot, message)
 
 
+# Если цель необязательна
 async def not_must_func(message: Message, state: FSMContext, bot: Bot):
     await state.update_data(must="Необязательно")
     all_data = await state.get_data()
 
+    await task_confirm(all_data, state, bot, message)
 
-    await task_write(all_data, state, bot, message)
 
-
-async def task_write(all_data, state, bot, message):
+# Итоговое создание цели
+async def task_confirm(all_data, state, bot, message):
     total_text = f"""{hbold('ЦЕЛЬ СОЗДАНА 🎉')}
 
 {hbold('Название:')} {all_data['name'].capitalize()}
@@ -38,10 +40,12 @@ async def task_write(all_data, state, bot, message):
     try:
         connection = sqlite3.connect('db/database.db')
         cursor = connection.cursor()
+        # Получаем данные о казначее
+        comittee_info = cursor.execute(f"SELECT school, class, letter FROM admin WHERE username = '{message.from_user.username}'").fetchone()
 
-        cursor.execute(f"INSERT INTO tasks (name, description, price, date_finish, must) VALUES "
+        cursor.execute(f"INSERT INTO tasks (name, description, price, date_finish, must, school, class, letter) VALUES "
                        f"('{all_data['name'].capitalize()}', '{all_data['desc'].capitalize()}', {int(all_data['price'])}, "
-                       f"'{all_data['date']}', '{all_data['must']}');")
+                       f"'{all_data['date']}', '{all_data['must']}', '{comittee_info[0]}', '{comittee_info[1]}', '{comittee_info[2]}');")
 
         connection.commit()
         cursor.close()
@@ -51,11 +55,7 @@ async def task_write(all_data, state, bot, message):
                                total_text,
                                parse_mode=ParseMode.HTML,
                                reply_markup=greeting_admin)
-    except sqlite3.IntegrityError:
-        await state.clear()
-        await bot.send_message(message.from_user.id,
-                               "Не удалось создать цель. Возможно, имя уже было использовано. Попробуйте заново.",
-                               reply_markup=greeting_admin)
+
     except ValueError:
         await state.clear()
         await bot.send_message(message.from_user.id,

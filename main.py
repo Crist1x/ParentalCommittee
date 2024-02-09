@@ -11,11 +11,11 @@ from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.utils.markdown import hbold
 
-import callbacks.admin_callbacks
+import callbacks.kazna_callbacks
 import utils.forms
 from data.config import greeting_user_text, greeting_admin_text
 from keyboards.reply import greeting_user, greeting_admin
-from handlers import admin_main
+from handlers import kazna_main
 from utils.forms import AddCard, AddTask
 
 
@@ -24,7 +24,7 @@ dotenv.load_dotenv(dotenv.find_dotenv())
 
 bot = Bot(token=os.getenv("TG_TOKEN"))
 dp = Dispatcher()
-dp.include_router(admin_main.router)
+dp.include_router(kazna_main.router)
 
 dp.message.register(utils.forms.get_card, AddCard.GET_CARD)
 dp.message.register(utils.forms.get_name, AddTask.GET_NAME)
@@ -32,8 +32,8 @@ dp.message.register(utils.forms.get_desc, AddTask.GET_DESC)
 dp.message.register(utils.forms.get_price, AddTask.GET_PRICE)
 dp.message.register(utils.forms.get_date, AddTask.GET_DATE)
 
-dp.callback_query.register(callbacks.admin_callbacks.must_func, F.data == "must")
-dp.callback_query.register(callbacks.admin_callbacks.not_must_func, F.data == "not_must")
+dp.callback_query.register(callbacks.kazna_callbacks.must_func, F.data == "must")
+dp.callback_query.register(callbacks.kazna_callbacks.not_must_func, F.data == "not_must")
 
 
 # Хэндлер на команду /start
@@ -41,27 +41,27 @@ dp.callback_query.register(callbacks.admin_callbacks.not_must_func, F.data == "n
 async def cmd_start(message: Message):
     connection = sqlite3.connect('db/database.db')
     cursor = connection.cursor()
+    # Получение всех казначеев
+    admins_list = [i[0] for i in cursor.execute("SELECT username FROM admin").fetchall()]
+
     # Если не от казначея
-    if message.from_user.username != str(os.getenv("ADMIN_USERNAME")):
+    if message.from_user.username not in admins_list:
         not_first_time = cursor.execute("SELECT username FROM users WHERE username=?",
                                         (message.from_user.username,)).fetchone()
+        # Если первый раз
         if not not_first_time:
             cursor.execute(f"""INSERT INTO users (username) VALUES ('{message.from_user.username}');""")
 
         await message.answer(greeting_user_text,
                              reply_markup=greeting_user)
     # Если от казначея
-    else:
-        not_first_time = cursor.execute("SELECT username FROM admin WHERE username=?",
-                                        (message.from_user.username,)).fetchone()
-        if not not_first_time:
-            cursor.execute(f"""INSERT INTO admin (username, card_number) VALUES ('{message.from_user.username}', '');""")
-        else:
-            pass
+    elif message.from_user.username in admins_list:
         await message.answer(greeting_admin_text,
                              reply_markup=greeting_admin)
-        await message.answer(f"Нажмите на кнопку \"{hbold('Привязать/Изменить карту')}\", чтобы создать первую цель для сбора.",
-                             parse_mode=ParseMode.HTML)
+        is_card = cursor.execute(f"SELECT card_number FROM admin WHERE username = '{message.from_user.username}'").fetchone()[0]
+        if not is_card:
+            await message.answer(f"Нажмите на кнопку \"{hbold('Привязать/Изменить карту')}\", чтобы создать первую цель для сбора.",
+                                 parse_mode=ParseMode.HTML)
     cursor.close()
     connection.commit()
 

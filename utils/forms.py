@@ -7,6 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.markdown import hbold
 
 import keyboards.inline
+from keyboards.reply import greeting_admin
 
 
 class AddCard(StatesGroup):
@@ -16,16 +17,19 @@ class AddCard(StatesGroup):
 async def get_card(message: Message, state: FSMContext):
     await state.update_data(card=message.text)
     card_num = await state.get_data()
+    if card_num['card'] != "В меню":
+        connection = sqlite3.connect('db/database.db')
+        cursor = connection.cursor()
+        cursor.execute(f"UPDATE admin SET card_number = '{str(card_num['card'])}' WHERE username = '{message.from_user.username}'")
+        cursor.close()
+        connection.commit()
 
-    connection = sqlite3.connect('db/database.db')
-    cursor = connection.cursor()
-    cursor.execute(f"UPDATE admin SET card_number = '{str(card_num['card'])}' WHERE username = '{message.from_user.username}'")
-    cursor.close()
-    connection.commit()
-
-    await message.answer(f"Все переводы теперь будут приходить на карту c номером {hbold(card_num['card'])}",
-                         parse_mode=ParseMode.HTML)
-    await state.clear()
+        await message.answer(f"Все переводы теперь будут приходить на карту c номером {hbold(card_num['card'])}",
+                             parse_mode=ParseMode.HTML)
+        await state.clear()
+    else:
+        await message.answer("Вы вернулись в меню", reply_markup=greeting_admin)
+        await state.clear()
 
 
 class AddTask(StatesGroup):
