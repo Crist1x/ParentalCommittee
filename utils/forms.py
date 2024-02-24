@@ -25,7 +25,7 @@ async def get_card(message: Message, state: FSMContext):
         connection.commit()
 
         await message.answer(f"Все переводы теперь будут приходить на карту c номером {hbold(card_num['card'])}",
-                             parse_mode=ParseMode.HTML)
+                             parse_mode=ParseMode.HTML, reply_markup=greeting_admin)
         await state.clear()
     else:
         await message.answer("Вы вернулись в меню", reply_markup=greeting_admin)

@@ -35,6 +35,9 @@ dp.message.register(utils.forms.get_date, AddTask.GET_DATE)
 dp.callback_query.register(callbacks.kazna_callbacks.must_func, F.data == "must")
 dp.callback_query.register(callbacks.kazna_callbacks.not_must_func, F.data == "not_must")
 
+dp.callback_query.register(callbacks.kazna_callbacks.next_func, F.data == "next")
+dp.callback_query.register(callbacks.kazna_callbacks.back_func, F.data == "back")
+
 
 # Хэндлер на команду /start
 @dp.message(CommandStart())

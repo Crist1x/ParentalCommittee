@@ -15,3 +15,7 @@ back = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text="В меню")]
     ], resize_keyboard=True)
 
+my_tasks_kb = ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text="Отредактировать"), KeyboardButton(text="Удалить")],
+        [KeyboardButton(text="В меню")]
+    ], resize_keyboard=True)
