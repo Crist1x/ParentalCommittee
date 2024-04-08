@@ -13,28 +13,40 @@ from aiogram.utils.markdown import hbold
 
 import callbacks.kazna_callbacks
 import utils.forms
-from data.config import greeting_user_text, greeting_admin_text
-from keyboards.reply import greeting_user, greeting_admin
-from handlers import kazna_main
-from utils.forms import AddCard, AddTask
+from data.config import greeting_user_text, greeting_kazna_text
+from keyboards.reply import greeting_user, greeting_kazna, greeting_admin
+from handlers import kazna_main, admin_main
+from utils.forms import AddCard, AddTask, AddTreasurer
 
 
 dotenv.load_dotenv(dotenv.find_dotenv())
 
-
+# Инициализация бота и подключение роутеров
 bot = Bot(token=os.getenv("TG_TOKEN"))
 dp = Dispatcher()
 dp.include_router(kazna_main.router)
+dp.include_router(admin_main.router)
 
+# Подключение Машины Состояния для получения карты казначея
 dp.message.register(utils.forms.get_card, AddCard.GET_CARD)
+
+# Подключение Машины Состояния для получения данных о цели
 dp.message.register(utils.forms.get_name, AddTask.GET_NAME)
 dp.message.register(utils.forms.get_desc, AddTask.GET_DESC)
 dp.message.register(utils.forms.get_price, AddTask.GET_PRICE)
 dp.message.register(utils.forms.get_date, AddTask.GET_DATE)
 
+# Подключение Машины Состояния для получения данных о казначее
+dp.message.register(utils.forms.get_nickname, AddTreasurer.GET_NICKNAME)
+dp.message.register(utils.forms.get_school, AddTreasurer.GET_SCHOOL)
+dp.message.register(utils.forms.get_class, AddTreasurer.GET_CLASS)
+dp.message.register(utils.forms.get_letter, AddTreasurer.GET_LETTER)
+
+# Регистрация колбеков для выбора необходимости цели
 dp.callback_query.register(callbacks.kazna_callbacks.must_func, F.data == "must")
 dp.callback_query.register(callbacks.kazna_callbacks.not_must_func, F.data == "not_must")
 
+# Регистрация колбеков для прокрутки целей вперед-назад
 dp.callback_query.register(callbacks.kazna_callbacks.next_func, F.data == "next")
 dp.callback_query.register(callbacks.kazna_callbacks.back_func, F.data == "back")
 
@@ -45,10 +57,10 @@ async def cmd_start(message: Message):
     connection = sqlite3.connect('db/database.db')
     cursor = connection.cursor()
     # Получение всех казначеев
-    admins_list = [i[0] for i in cursor.execute("SELECT username FROM admin").fetchall()]
+    kazna_list = [i[0] for i in cursor.execute("SELECT username FROM kazna").fetchall()]
 
     # Если не от казначея
-    if message.from_user.username not in admins_list:
+    if message.from_user.username not in kazna_list and message.from_user.username != os.getenv("ADMIN_USERNAME"):
         not_first_time = cursor.execute("SELECT username FROM users WHERE username=?",
                                         (message.from_user.username,)).fetchone()
         # Если первый раз
@@ -58,13 +70,17 @@ async def cmd_start(message: Message):
         await message.answer(greeting_user_text,
                              reply_markup=greeting_user)
     # Если от казначея
-    elif message.from_user.username in admins_list:
-        await message.answer(greeting_admin_text,
-                             reply_markup=greeting_admin)
+    elif message.from_user.username in kazna_list:
+        await message.answer(greeting_kazna_text,
+                             reply_markup=greeting_kazna)
         is_card = cursor.execute(f"SELECT card_number FROM admin WHERE username = '{message.from_user.username}'").fetchone()[0]
         if not is_card:
             await message.answer(f"Нажмите на кнопку \"{hbold('Привязать/Изменить карту')}\", чтобы создать первую цель для сбора.",
                                  parse_mode=ParseMode.HTML)
+    else:
+        await message.answer(
+            f"Приветсвую, администратор!",
+            reply_markup=greeting_admin)
     cursor.close()
     connection.commit()
 

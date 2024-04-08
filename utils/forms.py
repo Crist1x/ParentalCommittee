@@ -63,3 +63,52 @@ async def get_date(message: Message, state: FSMContext):
     await message.answer("Выберите обязательна ли цель для каждого человека: ",
                          reply_markup=keyboards.inline.must_ikb)
 
+
+class AddTreasurer(StatesGroup):
+    GET_NICKNAME = State()
+    GET_SCHOOL = State()
+    GET_CLASS = State()
+    GET_LETTER = State()
+
+
+async def get_nickname(message: Message, state: FSMContext):
+    await state.update_data(nickname=message.text)
+    await message.answer("Напишите номер школы казначея:")
+    await state.set_state(AddTreasurer.GET_SCHOOL)
+
+
+async def get_school(message: Message, state: FSMContext):
+    await state.update_data(school=message.text)
+    await message.answer("Напишите номер класса казначея (1-11):")
+    await state.set_state(AddTreasurer.GET_CLASS)
+
+
+async def get_class(message: Message, state: FSMContext):
+    await state.update_data(clas=message.text)
+    await message.answer("Напишите букву класса казначея:")
+    await state.set_state(AddTreasurer.GET_LETTER)
+
+
+async def get_letter(message: Message, state: FSMContext):
+    await state.update_data(letter=message.text)
+    data = await state.get_data()
+    await state.clear()
+
+    try:
+        connection = sqlite3.connect('db/database.db')
+        cursor = connection.cursor()
+        # Получаем данные о казначее
+
+        cursor.execute(f"INSERT INTO kazna (username, card_number, school, class, letter) VALUES "
+                       f"('{data['nickname']}', '', '{data['school']}', '{data['clas']}', '{data['letter']}');")
+
+        connection.commit()
+        cursor.close()
+
+        await message.answer("Казначей успешно добавлен")
+
+    except Exception as e:
+        print(e)
+        await message.answer("Произошла ошибка")
+
+
