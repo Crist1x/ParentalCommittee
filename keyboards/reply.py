@@ -7,7 +7,7 @@ greeting_user = ReplyKeyboardMarkup(keyboard=[
 
 greeting_admin = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text="/Add_Treasurer")],
-        [KeyboardButton(text="/Add_New_Class")]
+        [KeyboardButton(text="/Del_Treasurer")]
     ], resize_keyboard=True)
 
 greeting_kazna = ReplyKeyboardMarkup(keyboard=[

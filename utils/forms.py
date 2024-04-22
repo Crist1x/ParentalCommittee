@@ -64,6 +64,7 @@ async def get_date(message: Message, state: FSMContext):
                          reply_markup=keyboards.inline.must_ikb)
 
 
+# Добавление казначея (для админки)
 class AddTreasurer(StatesGroup):
     GET_NICKNAME = State()
     GET_SCHOOL = State()
@@ -73,42 +74,82 @@ class AddTreasurer(StatesGroup):
 
 async def get_nickname(message: Message, state: FSMContext):
     await state.update_data(nickname=message.text)
-    await message.answer("Напишите номер школы казначея:")
-    await state.set_state(AddTreasurer.GET_SCHOOL)
+    data = await state.get_data()
+    if data["nickname"] != "В меню":
+        await message.answer("Напишите номер школы казначея:")
+        await state.set_state(AddTreasurer.GET_SCHOOL)
+    else:
+        await message.answer("Вы вернулись в меню", reply_markup=greeting_admin)
+        await state.clear()
 
 
 async def get_school(message: Message, state: FSMContext):
     await state.update_data(school=message.text)
-    await message.answer("Напишите номер класса казначея (1-11):")
-    await state.set_state(AddTreasurer.GET_CLASS)
+    data = await state.get_data()
+    if data["school"] != "В меню":
+        await message.answer("Напишите номер класса казначея (1-11):")
+        await state.set_state(AddTreasurer.GET_CLASS)
+    else:
+        await message.answer("Вы вернулись в меню", reply_markup=greeting_admin)
+        await state.clear()
 
 
 async def get_class(message: Message, state: FSMContext):
     await state.update_data(clas=message.text)
-    await message.answer("Напишите букву класса казначея:")
-    await state.set_state(AddTreasurer.GET_LETTER)
+    data = await state.get_data()
+    if data["clas"] != "В меню":
+        await message.answer("Напишите букву класса казначея:")
+        await state.set_state(AddTreasurer.GET_LETTER)
+    else:
+        await message.answer("Вы вернулись в меню", reply_markup=greeting_admin)
+        await state.clear()
 
 
 async def get_letter(message: Message, state: FSMContext):
     await state.update_data(letter=message.text)
     data = await state.get_data()
     await state.clear()
+    if data["letter"] != "В меню":
+        try:
+            connection = sqlite3.connect('db/database.db')
+            cursor = connection.cursor()
 
-    try:
-        connection = sqlite3.connect('db/database.db')
-        cursor = connection.cursor()
-        # Получаем данные о казначее
+            cursor.execute(f"INSERT INTO kazna (username, card_number, school, class, letter) VALUES "
+                           f"('{data['nickname']}', '', '{data['school']}', '{data['clas']}', '{data['letter']}');")
+            cursor.execute(f"DELETE FROM users WHERE username='{data['nickname']}'")
 
-        cursor.execute(f"INSERT INTO kazna (username, card_number, school, class, letter) VALUES "
-                       f"('{data['nickname']}', '', '{data['school']}', '{data['clas']}', '{data['letter']}');")
+            connection.commit()
+            cursor.close()
 
-        connection.commit()
-        cursor.close()
+            await message.answer("Казначей успешно добавлен", reply_markup=greeting_admin)
 
-        await message.answer("Казначей успешно добавлен")
+        except Exception as e:
+            print(e)
+            await message.answer("Произошла ошибка", reply_markup=greeting_admin)
+    else:
+        await message.answer("Вы вернулись в меню", reply_markup=greeting_admin)
+        await state.clear()
 
-    except Exception as e:
-        print(e)
-        await message.answer("Произошла ошибка")
+
+# Удаление казначея (для админки)
+class DelTreasurer(StatesGroup):
+    GET_NICKNAME = State()
 
 
+async def del_treasurer(message: Message, state: FSMContext):
+    await state.update_data(nickname=message.text)
+    data = await state.get_data()
+    await state.clear()
+
+    connection = sqlite3.connect('db/database.db')
+    cursor = connection.cursor()
+    if cursor.execute(f"SELECT * FROM kazna WHERE username = '{data['nickname']}'").fetchone():
+        cursor.execute(f"DELETE FROM kazna WHERE username = '{data['nickname']}'")
+
+        await message.answer("Казначей успешно удален", reply_markup=greeting_admin)
+
+    else:
+        await message.answer("Произошла ошибка. Скорее всего казначея с указанным ником не найдено!",
+                             reply_markup=greeting_admin)
+    connection.commit()
+    cursor.close()

@@ -11,12 +11,13 @@ from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.utils.markdown import hbold
 
-import callbacks.kazna_callbacks
+import callbacks.kazna_callbacks, callbacks.user_callbacks
 import utils.forms
 from data.config import greeting_user_text, greeting_kazna_text
 from keyboards.reply import greeting_user, greeting_kazna, greeting_admin
 from handlers import kazna_main, admin_main
-from utils.forms import AddCard, AddTask, AddTreasurer
+from utils.forms import AddCard, AddTask, AddTreasurer, DelTreasurer
+from data.functions import generate_schools_ikb, get_school_list
 
 
 dotenv.load_dotenv(dotenv.find_dotenv())
@@ -42,6 +43,9 @@ dp.message.register(utils.forms.get_school, AddTreasurer.GET_SCHOOL)
 dp.message.register(utils.forms.get_class, AddTreasurer.GET_CLASS)
 dp.message.register(utils.forms.get_letter, AddTreasurer.GET_LETTER)
 
+# Подключение Машины Состояния для получения ника для удаления казначея
+dp.message.register(utils.forms.del_treasurer, DelTreasurer.GET_NICKNAME)
+
 # Регистрация колбеков для выбора необходимости цели
 dp.callback_query.register(callbacks.kazna_callbacks.must_func, F.data == "must")
 dp.callback_query.register(callbacks.kazna_callbacks.not_must_func, F.data == "not_must")
@@ -49,6 +53,10 @@ dp.callback_query.register(callbacks.kazna_callbacks.not_must_func, F.data == "n
 # Регистрация колбеков для прокрутки целей вперед-назад
 dp.callback_query.register(callbacks.kazna_callbacks.next_func, F.data == "next")
 dp.callback_query.register(callbacks.kazna_callbacks.back_func, F.data == "back")
+
+# Регистрация колбеков для выбора класса ученика
+for school in get_school_list():
+    dp.callback_query.register(callbacks.user_callbacks.choose_class, F.data == school)
 
 
 # Хэндлер на команду /start
@@ -63,12 +71,13 @@ async def cmd_start(message: Message):
     if message.from_user.username not in kazna_list and message.from_user.username != os.getenv("ADMIN_USERNAME"):
         not_first_time = cursor.execute("SELECT username FROM users WHERE username=?",
                                         (message.from_user.username,)).fetchone()
+        await message.answer(greeting_user_text,
+                             reply_markup=greeting_user)
         # Если первый раз
         if not not_first_time:
             cursor.execute(f"""INSERT INTO users (username) VALUES ('{message.from_user.username}');""")
+            await message.answer("Выберите школу, в которой учится ваш ребенок", reply_markup=generate_schools_ikb(get_school_list()))
 
-        await message.answer(greeting_user_text,
-                             reply_markup=greeting_user)
     # Если от казначея
     elif message.from_user.username in kazna_list:
         await message.answer(greeting_kazna_text,

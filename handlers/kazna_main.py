@@ -21,7 +21,7 @@ router = Router()
 @router.message(F.text == "Привязать/Изменить карту")
 async def add_card(message: Message, state: FSMContext):
     if kazna_check(message.from_user.username):
-        await message.answer("Введите номер карты (без лишних символов), который будет отображаться другим пользователям: ",
+        await message.answer("Введите номер карты (без лишних символов), который будет отображаться другим пользователям:",
                              reply_markup=keyboards.reply.back)
         await state.set_state(AddCard.GET_CARD)
 
