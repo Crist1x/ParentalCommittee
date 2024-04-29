@@ -138,3 +138,53 @@ def generate_classes_ikb(school, classes):
         )
 
     return InlineKeyboardMarkup(inline_keyboard=list1, resize_keyboard=True)
+
+
+def get_letters_list(school, class_):
+    connection = sqlite3.connect('db/database.db')
+    cursor = connection.cursor()
+    letters = list(map(str, sorted(
+        [int(obj[0]) for obj in cursor.execute(f"SELECT letter FROM kazna WHERE school='{school}' AND class='{class_}'").fetchall()])))
+    connection.commit()
+    cursor.close()
+    return letters
+
+
+def generate_letters_ikb(school, class_, letters):
+    list1 = []
+    if len(letters) % 2 == 0:
+        for i in range(0, len(letters) // 2, 2):
+            list1.append([
+                InlineKeyboardButton(
+                    text=letters[i],
+                    callback_data=f"{school}_{class_}_{letters[i]}"),
+                InlineKeyboardButton(
+                    text=letters[i+1],
+                    callback_data=f"{school}_{class_}_{letters[i+1]}")
+            ])
+        list1.append([
+                InlineKeyboardButton(
+                    text="Назад",
+                    callback_data="back_to_classes")]
+        )
+    else:
+        for i in range(0, (len(letters) - 1) // 2, 2):
+            list1.append([
+                InlineKeyboardButton(
+                    text=letters[i],
+                    callback_data=f"{school}_{class_}_{letters[i]}"),
+                InlineKeyboardButton(
+                    text=letters[i+1],
+                    callback_data=f"{school}_{class_}_{letters[i + 1]}")
+            ])
+        list1.append([
+            InlineKeyboardButton(
+                text=letters[-1],
+                callback_data=f"{school}_{class_}_{letters[-1]}"),
+            InlineKeyboardButton(
+                text="Назад",
+                callback_data="back_to_classes")
+            ]
+        )
+
+    return InlineKeyboardMarkup(inline_keyboard=list1, resize_keyboard=True)

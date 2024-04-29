@@ -17,7 +17,7 @@ from data.config import greeting_user_text, greeting_kazna_text
 from keyboards.reply import greeting_user, greeting_kazna, greeting_admin
 from handlers import kazna_main, admin_main
 from utils.forms import AddCard, AddTask, AddTreasurer, DelTreasurer
-from data.functions import generate_schools_ikb, get_school_list
+from data.functions import generate_schools_ikb, get_school_list, get_classes_list, get_letters_list
 
 
 dotenv.load_dotenv(dotenv.find_dotenv())
@@ -57,7 +57,10 @@ dp.callback_query.register(callbacks.kazna_callbacks.back_func, F.data == "back"
 # Регистрация колбеков для выбора класса ученика
 for school in get_school_list():
     dp.callback_query.register(callbacks.user_callbacks.choose_class, F.data == school)
-
+    for class_ in get_classes_list(school):
+        dp.callback_query.register(callbacks.user_callbacks.choose_letter, F.data == f"{school}_{class_}")
+        for letter in get_letters_list(school, class_):
+            dp.callback_query.register(callbacks.user_callbacks.class_confirmed, F.data == f"{school}_{class_}_{letter}")
 
 # Хэндлер на команду /start
 @dp.message(CommandStart())
@@ -71,11 +74,13 @@ async def cmd_start(message: Message):
     if message.from_user.username not in kazna_list and message.from_user.username != os.getenv("ADMIN_USERNAME"):
         not_first_time = cursor.execute("SELECT username FROM users WHERE username=?",
                                         (message.from_user.username,)).fetchone()
-        await message.answer(greeting_user_text,
-                             reply_markup=greeting_user)
+        if not_first_time:
+            await message.answer(greeting_user_text,
+                                 reply_markup=greeting_user)
+        else:
+            await message.answer(greeting_user_text)
         # Если первый раз
         if not not_first_time:
-            cursor.execute(f"""INSERT INTO users (username) VALUES ('{message.from_user.username}');""")
             await message.answer("Выберите школу, в которой учится ваш ребенок", reply_markup=generate_schools_ikb(get_school_list()))
 
     # Если от казначея
