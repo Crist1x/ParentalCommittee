@@ -15,8 +15,8 @@ import callbacks.kazna_callbacks, callbacks.user_callbacks
 import utils.forms
 from data.config import greeting_user_text, greeting_kazna_text
 from keyboards.reply import greeting_user, greeting_kazna, greeting_admin
-from handlers import kazna_main, admin_main
-from utils.forms import AddCard, AddTask, AddTreasurer, DelTreasurer
+from handlers import kazna_main, admin_main, user_main
+from utils.forms import AddCard, AddTask, AddTreasurer, DelTreasurer, GetTransferPhoto
 from data.functions import generate_schools_ikb, get_school_list, get_classes_list, get_letters_list
 
 
@@ -27,9 +27,13 @@ bot = Bot(token=os.getenv("TG_TOKEN"))
 dp = Dispatcher()
 dp.include_router(kazna_main.router)
 dp.include_router(admin_main.router)
+dp.include_router(user_main.router)
 
 # Подключение Машины Состояния для получения карты казначея
 dp.message.register(utils.forms.get_card, AddCard.GET_CARD)
+
+# Подключение Машины Состояния для получения фото перевода
+dp.message.register(utils.forms.get_photo, GetTransferPhoto.GET_PHOTO)
 
 # Подключение Машины Состояния для получения данных о цели
 dp.message.register(utils.forms.get_name, AddTask.GET_NAME)
@@ -50,9 +54,14 @@ dp.message.register(utils.forms.del_treasurer, DelTreasurer.GET_NICKNAME)
 dp.callback_query.register(callbacks.kazna_callbacks.must_func, F.data == "must")
 dp.callback_query.register(callbacks.kazna_callbacks.not_must_func, F.data == "not_must")
 
-# Регистрация колбеков для прокрутки целей вперед-назад
+# Регистрация колбеков для прокрутки целей вперед-назад (kazna)
 dp.callback_query.register(callbacks.kazna_callbacks.next_func, F.data == "next")
 dp.callback_query.register(callbacks.kazna_callbacks.back_func, F.data == "back")
+
+# Регистрация колбеков для прокрутки целей вперед-назад (user)
+dp.callback_query.register(callbacks.user_callbacks.next_task, F.data == "forv")
+dp.callback_query.register(callbacks.user_callbacks.back_task, F.data == "prev")
+dp.callback_query.register(callbacks.user_callbacks.pay, F.data == "pay")
 
 # Регистрация колбеков для выбора класса ученика
 for school in get_school_list():
@@ -61,6 +70,7 @@ for school in get_school_list():
         dp.callback_query.register(callbacks.user_callbacks.choose_letter, F.data == f"{school}_{class_}")
         for letter in get_letters_list(school, class_):
             dp.callback_query.register(callbacks.user_callbacks.class_confirmed, F.data == f"{school}_{class_}_{letter}")
+
 
 # Хэндлер на команду /start
 @dp.message(CommandStart())
@@ -87,7 +97,7 @@ async def cmd_start(message: Message):
     elif message.from_user.username in kazna_list:
         await message.answer(greeting_kazna_text,
                              reply_markup=greeting_kazna)
-        is_card = cursor.execute(f"SELECT card_number FROM admin WHERE username = '{message.from_user.username}'").fetchone()[0]
+        is_card = cursor.execute(f"SELECT card_number FROM kazna WHERE username = '{message.from_user.username}'").fetchone()[0]
         if not is_card:
             await message.answer(f"Нажмите на кнопку \"{hbold('Привязать/Изменить карту')}\", чтобы создать первую цель для сбора.",
                                  parse_mode=ParseMode.HTML)
@@ -97,6 +107,9 @@ async def cmd_start(message: Message):
             reply_markup=greeting_admin)
     cursor.close()
     connection.commit()
+
+# Сделать регистрацию колбеков для выбора буквы (пробегаться циклом n раз, где n -колво казначеев, создавая колбеки
+# под каждую связку школа-класс)
 
 
 # Запуск процесса поллинга новых апдейтов

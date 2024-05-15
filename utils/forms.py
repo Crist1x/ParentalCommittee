@@ -153,3 +153,14 @@ async def del_treasurer(message: Message, state: FSMContext):
                              reply_markup=greeting_admin)
     connection.commit()
     cursor.close()
+
+
+class GetTransferPhoto(StatesGroup):
+    GET_PHOTO = State()
+
+
+async def get_photo(message: Message, state: FSMContext):
+    await state.update_data(photo=message.photo, capture=message.text)
+    data = await state.get_data()
+    await state.clear()
+    print(data)

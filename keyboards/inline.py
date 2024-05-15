@@ -24,6 +24,21 @@ my_tasks_ikb = InlineKeyboardMarkup(inline_keyboard=[
     ]
 ], resize_keyboard=True)
 
+tasks_ikb = InlineKeyboardMarkup(inline_keyboard=[
+    [
+        InlineKeyboardButton(
+            text="⬅️",
+            callback_data="prev"
+        ), InlineKeyboardButton(
+            text="➡️",
+            callback_data="forv"
+        )
+    ], [InlineKeyboardButton(
+            text="Оплатить",
+            callback_data="pay"
+        )]
+], resize_keyboard=True)
+
 edit_task_ikb = InlineKeyboardMarkup(inline_keyboard=[
     [
         InlineKeyboardButton(

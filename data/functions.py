@@ -16,6 +16,15 @@ def kazna_check(username):
     return is_kaz
 
 
+def user_reg_check(username):
+    conn = sqlite3.connect('db/database.db')
+    cursor = conn.cursor()
+
+    is_kaz = cursor.execute(f"SELECT school, class, letter FROM users WHERE username = '{username}'").fetchone()
+    cursor.close()
+    return is_kaz
+
+
 # Проверка на казначея
 def admin_check(username):
     if os.getenv("ADMIN_USERNAME") == username:
@@ -26,10 +35,15 @@ def admin_check(username):
 def generate_task(callback):
     connection = sqlite3.connect('db/database.db')
     cursor = connection.cursor()
-    kazna_data = cursor.execute(
-        f"SELECT school, class, letter FROM kazna WHERE username = '{callback.from_user.username}'").fetchone()
+    is_kazna = kazna_check(callback.from_user.username)
+    if is_kazna:
+        data = cursor.execute(
+            f"SELECT school, class, letter FROM kazna WHERE username = '{callback.from_user.username}'").fetchone()
+    else:
+        data = cursor.execute(
+            f"SELECT school, class, letter FROM users WHERE username = '{callback.from_user.username}'").fetchone()
     my_tasks = cursor.execute(f"SELECT name, description, price, date_finish, must FROM tasks WHERE "
-                              f"school = '{kazna_data[0]}' AND class = '{kazna_data[1]}' AND letter = '{kazna_data[2]}'").fetchall()
+                              f"school = '{data[0]}' AND class = '{data[1]}' AND letter = '{data[2]}'").fetchall()
     connection.commit()
     cursor.close()
 
