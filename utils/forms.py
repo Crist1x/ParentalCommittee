@@ -10,6 +10,7 @@ import keyboards.inline
 from keyboards.reply import greeting_admin
 
 
+
 class AddCard(StatesGroup):
     GET_CARD = State()
 
@@ -20,7 +21,7 @@ async def get_card(message: Message, state: FSMContext):
     if card_num['card'] != "В меню":
         connection = sqlite3.connect('db/database.db')
         cursor = connection.cursor()
-        cursor.execute(f"UPDATE admin SET card_number = '{str(card_num['card'])}' WHERE username = '{message.from_user.username}'")
+        cursor.execute(f"UPDATE admin SET card_number = '{str(card_num['card'])}' WHERE username = '{message.from_user.id}'")
         cursor.close()
         connection.commit()
 
@@ -159,8 +160,4 @@ class GetTransferPhoto(StatesGroup):
     GET_PHOTO = State()
 
 
-async def get_photo(message: Message, state: FSMContext):
-    await state.update_data(photo=message.photo, capture=message.text)
-    data = await state.get_data()
-    await state.clear()
-    print(data)
+# Функция отправки фотографии перевода казначею находится в файле main

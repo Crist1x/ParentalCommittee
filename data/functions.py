@@ -35,13 +35,13 @@ def admin_check(username):
 def generate_task(callback):
     connection = sqlite3.connect('db/database.db')
     cursor = connection.cursor()
-    is_kazna = kazna_check(callback.from_user.username)
+    is_kazna = kazna_check(callback.from_user.id)
     if is_kazna:
         data = cursor.execute(
-            f"SELECT school, class, letter FROM kazna WHERE username = '{callback.from_user.username}'").fetchone()
+            f"SELECT school, class, letter FROM kazna WHERE username = '{callback.from_user.id}'").fetchone()
     else:
         data = cursor.execute(
-            f"SELECT school, class, letter FROM users WHERE username = '{callback.from_user.username}'").fetchone()
+            f"SELECT school, class, letter FROM users WHERE username = '{callback.from_user.id}'").fetchone()
     my_tasks = cursor.execute(f"SELECT name, description, price, date_finish, must FROM tasks WHERE "
                               f"school = '{data[0]}' AND class = '{data[1]}' AND letter = '{data[2]}'").fetchall()
     connection.commit()

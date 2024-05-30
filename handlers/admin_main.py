@@ -15,7 +15,7 @@ router = Router()
 
 @router.message(Command("Add_Treasurer"))
 async def add_treasurer(message: Message, state: FSMContext):
-    if admin_check(message.from_user.username):
+    if admin_check(message.from_user.id):
         await message.answer("Введите тг ник казначея: ",
                              reply_markup=keyboards.reply.back)
         await state.set_state(AddTreasurer.GET_NICKNAME)
@@ -23,7 +23,7 @@ async def add_treasurer(message: Message, state: FSMContext):
 
 @router.message(Command("Del_Treasurer"))
 async def add_treasurer(message: Message, state: FSMContext):
-    if admin_check(message.from_user.username):
+    if admin_check(message.from_user.id):
         await message.answer("Введите тг ник казначея: ",
                              reply_markup=keyboards.reply.back)
         await state.set_state(DelTreasurer.GET_NICKNAME)

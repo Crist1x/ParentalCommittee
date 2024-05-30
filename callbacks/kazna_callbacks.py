@@ -95,7 +95,7 @@ async def task_confirm(all_data, state, bot, message):
         connection = sqlite3.connect('db/database.db')
         cursor = connection.cursor()
         # Получаем данные о казначее
-        comittee_info = cursor.execute(f"SELECT school, class, letter FROM kazna WHERE username = '{message.from_user.username}'").fetchone()
+        comittee_info = cursor.execute(f"SELECT school, class, letter FROM kazna WHERE username = '{message.from_user.id}'").fetchone()
 
         cursor.execute(f"INSERT INTO tasks (name, description, price, date_finish, must, school, class, letter) VALUES "
                        f"('{all_data['name'].capitalize()}', '{all_data['desc'].capitalize()}', {int(all_data['price'])}, "

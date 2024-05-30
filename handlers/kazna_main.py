@@ -20,7 +20,7 @@ router = Router()
 # Хендлер привязки/изменения карты
 @router.message(F.text == "Привязать/Изменить карту")
 async def add_card(message: Message, state: FSMContext):
-    if kazna_check(message.from_user.username):
+    if kazna_check(message.from_user.id):
         await message.answer("Введите номер карты (без лишних символов), который будет отображаться другим пользователям:",
                              reply_markup=keyboards.reply.back)
         await state.set_state(AddCard.GET_CARD)
@@ -29,7 +29,7 @@ async def add_card(message: Message, state: FSMContext):
 # Хендлер создания цели
 @router.message(F.text == "Создать цель")
 async def create_task(message: Message, state: FSMContext):
-    if kazna_check(message.from_user.username):
+    if kazna_check(message.from_user.id):
         await message.answer("Напишите название цели (кратко): ")
         await state.set_state(AddTask.GET_NAME)
 
@@ -37,12 +37,12 @@ async def create_task(message: Message, state: FSMContext):
 # Хендлер мои цели
 @router.message(F.text == "Мои цели")
 async def my_tasks(message: Message):
-    if kazna_check(message.from_user.username):
+    if kazna_check(message.from_user.id):
         await message.answer("Здесь вы можете удалить или отредактировать ваши цели:", reply_markup=keyboards.reply.my_tasks_kb)
         # Получение информации о всех целях конкретного казначея
         connection = sqlite3.connect('db/database.db')
         cursor = connection.cursor()
-        kazna_data = cursor.execute(f"SELECT school, class, letter FROM kazna WHERE username = '{message.from_user.username}'").fetchone()
+        kazna_data = cursor.execute(f"SELECT school, class, letter FROM kazna WHERE username = '{message.from_user.id}'").fetchone()
         my_tasks = cursor.execute(f"SELECT name, description, price, date_finish, must FROM tasks WHERE "
                                   f"school = '{kazna_data[0]}' AND class = '{kazna_data[1]}' AND letter = '{kazna_data[2]}'").fetchall()
         # Генерирование сообщения с первой целью
@@ -62,13 +62,13 @@ async def my_tasks(message: Message):
 # Хендлер удалить цель
 @router.message(F.text == "Удалить")
 async def delete_task(message: Message):
-    if kazna_check(message.from_user.username):
+    if kazna_check(message.from_user.id):
         indx = callbacks.kazna_callbacks.task_indx
         task = data.functions.generate_task(message)
         connection = sqlite3.connect('db/database.db')
         cursor = connection.cursor()
         kd = cursor.execute(
-            f"SELECT school, class, letter FROM kazna WHERE username = '{message.from_user.username}'").fetchone()
+            f"SELECT school, class, letter FROM kazna WHERE username = '{message.from_user.id}'").fetchone()
         cursor.execute(f"""DELETE FROM tasks WHERE name = '{task[indx][0]}' AND description = '{task[indx][1]}' AND price = '{task[indx][2]}'
                            AND date_finish = '{task[indx][3]}' AND must = '{task[indx][4]}' AND school = '{kd[0]}'
                            AND class = '{kd[1]}' AND letter = '{kd[2]}'""")
@@ -80,9 +80,9 @@ async def delete_task(message: Message):
 # Хендлер возвращения в меню
 @router.message(F.text == "В меню")
 async def menu_back(message: Message):
-    if kazna_check(message.from_user.username):
+    if kazna_check(message.from_user.id):
         await message.answer("Вы вернулись в меню", reply_markup=keyboards.reply.greeting_kazna)
-    elif data.functions.admin_check(message.from_user.username):
+    elif data.functions.admin_check(message.from_user.id):
         await message.answer("Вы вернулись в меню", reply_markup=keyboards.reply.greeting_admin)
 
 

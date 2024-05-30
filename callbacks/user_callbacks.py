@@ -30,7 +30,7 @@ async def class_confirmed(callback: types.CallbackQuery):
     connection = sqlite3.connect('db/database.db')
     cursor = connection.cursor()
 
-    cursor.execute(f"""INSERT INTO users (username, school, class, letter) VALUES ('{callback.from_user.username}', '{school}',
+    cursor.execute(f"""INSERT INTO users (username, school, class, letter) VALUES ('{callback.from_user.id}', '{school}',
                         '{class_}', '{letter}');""")
     cursor.close()
     connection.commit()

@@ -1,4 +1,6 @@
+from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
 
 must_ikb = InlineKeyboardMarkup(inline_keyboard=[
     [
