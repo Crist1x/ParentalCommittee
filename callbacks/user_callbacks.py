@@ -9,7 +9,7 @@ from keyboards.reply import greeting_user
 from utils.forms import GetTransferPhoto
 
 task_indx = 0
-
+name = ""
 
 async def choose_class(callback: types.CallbackQuery):
     school = callback.data
@@ -92,9 +92,24 @@ async def back_task(callback: types.CallbackQuery):
 
 
 async def pay(callback: types.CallbackQuery, state: FSMContext):
-    message_data = callback.message.text
-    await callback.message.answer(f"К ОПЛАТЕ: {message_data.split('Сумма (чел): ')[1].split(' ₽')[0]}"
-                          f"\nПосле оплаты пришлите фотографию чека. Следующим шагом можно будет оставить комментарий "
-                          f"(например, если перевод был выполнен от 3-его лица.)")
+    global name
 
+    message_data = callback.message.text
+
+    connection = sqlite3.connect('db/database.db')
+    cursor = connection.cursor()
+
+    school_info = cursor.execute(f"SELECT school, class, letter FROM users WHERE username = {callback.from_user.id}").fetchone()
+    kazna_card = cursor.execute(f"SELECT card_number FROM kazna WHERE school = '{school_info[0]}' AND class = '{school_info[1]}' AND letter = '{school_info[2]}'").fetchone()[0]
+
+    cursor.close()
+    connection.commit()
+
+    await callback.message.answer(f"*Цель:* {message_data.split('Название: ')[1].split('Описание:')[0]}"
+                          f"*Реквизиты для перевода:* `{kazna_card}`\n"
+                          f"*К оплате:* {message_data.split('Сумма (чел): ')[1].split(' ₽')[0]} ₽"
+                          f"\n\nПосле оплаты пришлите фотографию чека. Следующим шагом можно будет оставить комментарий "
+                          f"(например, если перевод был выполнен от 3-его лица.)", parse_mode="MARKDOWN")
+
+    name = message_data.split('Название: ')[1].split('Описание:')[0]
     await state.set_state(GetTransferPhoto.GET_PHOTO)

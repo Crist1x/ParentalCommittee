@@ -10,7 +10,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 import callbacks.kazna_callbacks, callbacks.user_callbacks
 import utils.forms
-from data.config import greeting_user_text, greeting_kazna_text
+from data.config import greeting_user_text, greeting_kazna_text, cansel_tranz
 from keyboards.reply import greeting_user, greeting_kazna
 from handlers import kazna_main, admin_main, user_main
 from utils.forms import *
@@ -21,6 +21,7 @@ from data.functions import generate_schools_ikb, get_school_list, get_classes_li
 async def get_photo(message: Message, state: FSMContext):
     await state.update_data(photo=message.photo[-1].file_id, capture=message.text)
     photo = await state.get_data()
+    await message.answer("Фотография успешно отправлена на верификацию казначею! Как только он подтвердит, цель будет вычеркнута из вашего списка")
 
     await state.clear()
     connection = sqlite3.connect('db/database.db')
@@ -29,10 +30,10 @@ async def get_photo(message: Message, state: FSMContext):
     kazna_id = cursor.execute(f"SELECT username FROM kazna WHERE school='{user_data[0]}' AND class='{user_data[1]}' AND letter='{user_data[2]}'").fetchone()[0]
 
     if message.from_user.username is not None or message.from_user.username != '':
-        text = f"@{message.from_user.username} перевел вам средства. Проверьте перевод в приложении вашего банка, и " \
+        text = f"@{message.from_user.username} перевел вам средства за цель с названием \"{callbacks.user_callbacks.name.rstrip()}\". Проверьте перевод в приложении вашего банка, и " \
                f"если деньги были зачислены, то подтвердите перевод. В противном случае - отклоните"
     else:
-        text = f"{message.from_user.last_name, message.from_user.first_name} перевел вам средства. Проверьте перевод в " \
+        text = f"{message.from_user.last_name, message.from_user.first_name} перевел вам средства за цель с названием \"{callbacks.user_callbacks.name.rstrip()}\". Проверьте перевод в " \
                f"приложении вашего банка, и если деньги были зачислены, то подтвердите перевод. В противном случае - " \
                f"отклоните"
 
@@ -50,12 +51,32 @@ async def get_photo(message: Message, state: FSMContext):
 
     await bot.send_photo(kazna_id, photo["photo"], caption=text, reply_markup=markup)
 
+    connection.commit()
+    cursor.close()
+
 
 async def confirmtranz(callback: types.CallbackQuery):
     user_id = callback.data.split("_")[1]
     await callback.message.delete()
     await callback.message.answer("Вы подтвердили перевод!")
+
+    connection = sqlite3.connect('db/database.db')
+    cursor = connection.cursor()
+
+    user_data = cursor.execute(f"SELECT school, class, letter FROM users WHERE username='{user_id}'").fetchone()
+    cursor.execute(f"INSERT INTO done (user_id, name, school, class, letter) VALUES ('{user_id}', '{callbacks.user_callbacks.name}', '{user_data[0]}', '{user_data[1]}', '{user_data[2]}');")
+
+    connection.commit()
+    cursor.close()
+
     await bot.send_message(user_id, "Казначей подтвердил перевод! Цель вычеркнута")
+
+
+async def canseltranz(callback: types.CallbackQuery):
+    user_id = callback.data.split("_")[1]
+    await callback.message.delete()
+    await callback.message.answer("Вы отказали в подтверждении перевода!")
+    await bot.send_message(user_id, cansel_tranz)
 
 
 dotenv.load_dotenv(dotenv.find_dotenv())
@@ -102,6 +123,7 @@ dp.callback_query.register(callbacks.user_callbacks.back_task, F.data == "prev")
 dp.callback_query.register(callbacks.user_callbacks.pay, F.data == "pay")
 
 dp.callback_query.register(confirmtranz, F.data.startswith("confirmtranz_"))
+dp.callback_query.register(canseltranz, F.data.startswith("canseltranz_"))
 
 # Регистрация колбеков для выбора класса ученика
 for school in get_school_list():
