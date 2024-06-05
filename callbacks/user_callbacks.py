@@ -5,11 +5,12 @@ from aiogram.fsm.context import FSMContext
 
 from data.functions import get_classes_list, generate_classes_ikb, generate_letters_ikb, get_letters_list, generate_task
 from keyboards.inline import tasks_ikb
-from keyboards.reply import greeting_user
+from keyboards.reply import greeting_user, back
 from utils.forms import GetTransferPhoto
 
 task_indx = 0
 name = ""
+
 
 async def choose_class(callback: types.CallbackQuery):
     school = callback.data
@@ -106,10 +107,10 @@ async def pay(callback: types.CallbackQuery, state: FSMContext):
     connection.commit()
 
     await callback.message.answer(f"*Цель:* {message_data.split('Название: ')[1].split('Описание:')[0]}"
-                          f"*Реквизиты для перевода:* `{kazna_card}`\n"
+                          f"*Реквизиты для перевода:* `{kazna_card}` (Нажмите для копирования)\n"
                           f"*К оплате:* {message_data.split('Сумма (чел): ')[1].split(' ₽')[0]} ₽"
                           f"\n\nПосле оплаты пришлите фотографию чека. Следующим шагом можно будет оставить комментарий "
-                          f"(например, если перевод был выполнен от 3-его лица.)", parse_mode="MARKDOWN")
+                          f"(например, если перевод был выполнен от 3-его лица.)", parse_mode="MARKDOWN", reply_markup=back)
 
     name = message_data.split('Название: ')[1].split('Описание:')[0]
     await state.set_state(GetTransferPhoto.GET_PHOTO)

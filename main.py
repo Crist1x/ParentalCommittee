@@ -19,40 +19,45 @@ from data.functions import generate_schools_ikb, get_school_list, get_classes_li
 
 # Функция отправки фотографии перевода казначею
 async def get_photo(message: Message, state: FSMContext):
-    await state.update_data(photo=message.photo[-1].file_id, capture=message.text)
-    photo = await state.get_data()
-    await message.answer("Фотография успешно отправлена на верификацию казначею! Как только он подтвердит, цель будет вычеркнута из вашего списка")
+    if message.text not in ("Показать цели", "В меню"):
+        await state.update_data(photo=message.photo[-1].file_id, capture=message.text)
+        photo = await state.get_data()
+        await message.answer("Фотография успешно отправлена на верификацию казначею! Как только он подтвердит, цель будет вычеркнута из вашего списка")
 
-    await state.clear()
-    connection = sqlite3.connect('db/database.db')
-    cursor = connection.cursor()
-    user_data = cursor.execute(f"SELECT school, class, letter FROM users WHERE username='{message.from_user.id}'").fetchone()
-    kazna_id = cursor.execute(f"SELECT username FROM kazna WHERE school='{user_data[0]}' AND class='{user_data[1]}' AND letter='{user_data[2]}'").fetchone()[0]
+        await state.clear()
+        connection = sqlite3.connect('db/database.db')
+        cursor = connection.cursor()
+        user_data = cursor.execute(f"SELECT school, class, letter FROM users WHERE username='{message.from_user.id}'").fetchone()
+        kazna_id = cursor.execute(f"SELECT username FROM kazna WHERE school='{user_data[0]}' AND class='{user_data[1]}' AND letter='{user_data[2]}'").fetchone()[0]
 
-    if message.from_user.username is not None or message.from_user.username != '':
-        text = f"@{message.from_user.username} перевел вам средства за цель с названием \"{callbacks.user_callbacks.name.rstrip()}\". Проверьте перевод в приложении вашего банка, и " \
-               f"если деньги были зачислены, то подтвердите перевод. В противном случае - отклоните"
+        if message.from_user.username is not None or message.from_user.username != '':
+            text = f"@{message.from_user.username} перевел вам средства за цель с названием \"{callbacks.user_callbacks.name.rstrip()}\". Проверьте перевод в приложении вашего банка, и " \
+                   f"если деньги были зачислены, то подтвердите перевод. В противном случае - отклоните"
+        else:
+            text = f"{message.from_user.last_name, message.from_user.first_name} перевел вам средства за цель с названием \"{callbacks.user_callbacks.name.rstrip()}\". Проверьте перевод в " \
+                   f"приложении вашего банка, и если деньги были зачислены, то подтвердите перевод. В противном случае - " \
+                   f"отклоните"
+
+        markup = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Подтвердить",
+                    callback_data=f"confirmtranz_{message.from_user.id}"
+                ),
+                InlineKeyboardButton(
+                    text="Отказать",
+                    callback_data=f"canseltranz_{message.from_user.id}")
+            ]
+        ], resize_keyboard=True)
+
+        await bot.send_photo(kazna_id, photo["photo"], caption=text, reply_markup=markup)
+
+        connection.commit()
+        cursor.close()
     else:
-        text = f"{message.from_user.last_name, message.from_user.first_name} перевел вам средства за цель с названием \"{callbacks.user_callbacks.name.rstrip()}\". Проверьте перевод в " \
-               f"приложении вашего банка, и если деньги были зачислены, то подтвердите перевод. В противном случае - " \
-               f"отклоните"
-
-    markup = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="Подтвердить",
-                callback_data=f"confirmtranz_{message.from_user.id}"
-            ),
-            InlineKeyboardButton(
-                text="Отказать",
-                callback_data=f"canseltranz_{message.from_user.id}")
-        ]
-    ], resize_keyboard=True)
-
-    await bot.send_photo(kazna_id, photo["photo"], caption=text, reply_markup=markup)
-
-    connection.commit()
-    cursor.close()
+        await state.clear()
+        if message.text == "В меню":
+            await message.answer("Вы вернулись в меню", reply_markup=greeting_user)
 
 
 async def confirmtranz(callback: types.CallbackQuery):
@@ -64,19 +69,19 @@ async def confirmtranz(callback: types.CallbackQuery):
     cursor = connection.cursor()
 
     user_data = cursor.execute(f"SELECT school, class, letter FROM users WHERE username='{user_id}'").fetchone()
-    cursor.execute(f"INSERT INTO done (user_id, name, school, class, letter) VALUES ('{user_id}', '{callbacks.user_callbacks.name}', '{user_data[0]}', '{user_data[1]}', '{user_data[2]}');")
+    cursor.execute(f"INSERT INTO done (user_id, name, school, class, letter) VALUES ('{user_id}', '{callbacks.user_callbacks.name.strip()}', '{user_data[0]}', '{user_data[1]}', '{user_data[2]}');")
 
     connection.commit()
     cursor.close()
 
-    await bot.send_message(user_id, "Казначей подтвердил перевод! Цель вычеркнута")
+    await bot.send_message(user_id, "Казначей подтвердил перевод! Цель вычеркнута", reply_markup=greeting_user)
 
 
 async def canseltranz(callback: types.CallbackQuery):
     user_id = callback.data.split("_")[1]
     await callback.message.delete()
     await callback.message.answer("Вы отказали в подтверждении перевода!")
-    await bot.send_message(user_id, cansel_tranz)
+    await bot.send_message(user_id, cansel_tranz, reply_markup=greeting_user)
 
 
 dotenv.load_dotenv(dotenv.find_dotenv())

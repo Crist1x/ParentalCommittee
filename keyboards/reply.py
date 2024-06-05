@@ -25,3 +25,7 @@ my_tasks_kb = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text="В меню")]
     ], resize_keyboard=True)
 
+user_stats = ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text="История переводов 📜")],
+        [KeyboardButton(text="В меню")]
+    ], resize_keyboard=True)

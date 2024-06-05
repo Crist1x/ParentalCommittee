@@ -39,11 +39,19 @@ def generate_task(callback):
     if is_kazna:
         data = cursor.execute(
             f"SELECT school, class, letter FROM kazna WHERE username = '{callback.from_user.id}'").fetchone()
+        my_tasks = cursor.execute(f"SELECT name, description, price, date_finish, must FROM tasks WHERE "
+                                  f"school = '{data[0]}' AND class = '{data[1]}' AND letter = '{data[2]}'").fetchall()
     else:
         data = cursor.execute(
             f"SELECT school, class, letter FROM users WHERE username = '{callback.from_user.id}'").fetchone()
-    my_tasks = cursor.execute(f"SELECT name, description, price, date_finish, must FROM tasks WHERE "
-                              f"school = '{data[0]}' AND class = '{data[1]}' AND letter = '{data[2]}'").fetchall()
+        done_tasks = cursor.execute(f"SELECT name FROM done WHERE user_id='{callback.from_user.id}' AND "
+                                    f"school = '{data[0]}' AND class = '{data[1]}' AND letter = '{data[2]}'").fetchall()
+        my_tasks = cursor.execute(f"SELECT name, description, price, date_finish, must FROM tasks WHERE "
+                                  f"school = '{data[0]}' AND class = '{data[1]}' AND letter = '{data[2]}'").fetchall()
+        for done_task in done_tasks:
+            for task in my_tasks:
+                if done_task[0] == task[0]:
+                    my_tasks.remove(task)
     connection.commit()
     cursor.close()
 
