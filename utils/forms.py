@@ -4,31 +4,47 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
-from aiogram.utils.markdown import hbold
+from aiogram.utils.markdown import hbold, hunderline
 
 import keyboards.inline
-from keyboards.reply import greeting_admin
+from keyboards.reply import greeting_kazna, greeting_admin
+from data.functions import change_task
 
 
 class AddCard(StatesGroup):
     GET_CARD = State()
+    GET_BANK = State()
 
 
 async def get_card(message: Message, state: FSMContext):
     await state.update_data(card=message.text)
-    card_num = await state.get_data()
-    if card_num['card'] != "В меню":
+    data = await state.get_data()
+
+    if data['card'] != "В меню":
         connection = sqlite3.connect('db/database.db')
         cursor = connection.cursor()
-        cursor.execute(f"UPDATE admin SET card_number = '{str(card_num['card'])}' WHERE username = '{message.from_user.id}'")
+        cursor.execute(f"UPDATE kazna SET card_number = '{str(data['card'])}_{str(data['bank'])}' WHERE username = '{message.from_user.id}'")
         cursor.close()
         connection.commit()
 
-        await message.answer(f"Все переводы теперь будут приходить на карту c номером {hbold(card_num['card'])}",
-                             parse_mode=ParseMode.HTML, reply_markup=greeting_admin)
-        await state.clear()
+        await message.answer(f"Все переводы теперь будут приходить на карту c номером {hbold(data['card'])} банка {hbold(data['bank'])}",
+                             parse_mode=ParseMode.HTML, reply_markup=greeting_kazna)
     else:
-        await message.answer("Вы вернулись в меню", reply_markup=greeting_admin)
+        await message.answer("Вы вернулись в меню", reply_markup=greeting_kazna)
+
+    await state.clear()
+
+
+async def get_bank(message: Message, state: FSMContext):
+    await state.update_data(bank=message.text)
+    bank = await state.get_data()
+
+    if bank['bank'] != "В меню":
+        await message.answer("Введите номер карты (без лишних символов), который будет "
+                             "отображаться другим пользователям:")
+        await state.set_state(AddCard.GET_CARD)
+    else:
+        await message.answer("Вы вернулись в меню", reply_markup=greeting_kazna)
         await state.clear()
 
 
@@ -157,6 +173,64 @@ async def del_treasurer(message: Message, state: FSMContext):
 
 class GetTransferPhoto(StatesGroup):
     GET_PHOTO = State()
-
-
 # Функция отправки фотографии перевода казначею находится в файле main
+
+
+# Получение нового имени цели
+class GetNewName(StatesGroup):
+    NEW_NAME = State()
+
+
+async def get_new_name(message: Message, state: FSMContext):
+    await state.update_data(name=message.text)
+    data = await state.get_data()
+    await state.clear()
+
+    change_task("name", data, message)
+
+    await message.answer("Имя цели было успешно изменено!", reply_markup=greeting_kazna)
+
+
+# Получение нового описания цели
+class GetNewDesc(StatesGroup):
+    NEW_DESC = State()
+
+
+async def get_new_desc(message: Message, state: FSMContext):
+    await state.update_data(desc=message.text)
+    data = await state.get_data()
+    await state.clear()
+
+    change_task("desc", data, message)
+
+    await message.answer("Описание цели было успешно изменено!", reply_markup=greeting_kazna)
+
+
+# Получение новой суммы цели
+class GetNewSumm(StatesGroup):
+    NEW_SUMM = State()
+
+
+async def get_new_summ(message: Message, state: FSMContext):
+    await state.update_data(summ=message.text)
+    data = await state.get_data()
+    await state.clear()
+
+    change_task("summ", data, message)
+
+    await message.answer("Сумма сбора средств на цель была успешна изменена!", reply_markup=greeting_kazna)
+
+
+# Получение нового дедлайна цели
+class GetNewDate(StatesGroup):
+    NEW_DATE = State()
+
+
+async def get_new_date(message: Message, state: FSMContext):
+    await state.update_data(date=message.text)
+    data = await state.get_data()
+    await state.clear()
+
+    change_task("date", data, message)
+
+    await message.answer("Дедлайн цели был успешно изменен!", reply_markup=greeting_kazna)

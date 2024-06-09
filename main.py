@@ -1,20 +1,23 @@
 import asyncio
 import logging
-import dotenv
 import os
 import sys
 
+import dotenv
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-import callbacks.kazna_callbacks, callbacks.user_callbacks
+import callbacks.kazna_callbacks
+import callbacks.user_callbacks
+import data.functions
 import utils.forms
 from data.config import greeting_user_text, greeting_kazna_text, cansel_tranz
-from keyboards.reply import greeting_user, greeting_kazna
-from handlers import kazna_main, admin_main, user_main
-from utils.forms import *
 from data.functions import generate_schools_ikb, get_school_list, get_classes_list, get_letters_list
+from handlers import kazna_main, admin_main, user_main
+from keyboards.inline import my_tasks_ikb2
+from keyboards.reply import greeting_user
+from utils.forms import *
 
 
 # Функция отправки фотографии перевода казначею
@@ -94,6 +97,7 @@ dp.include_router(admin_main.router)
 dp.include_router(user_main.router)
 
 # Подключение Машины Состояния для получения карты казначея
+dp.message.register(utils.forms.get_bank, AddCard.GET_BANK)
 dp.message.register(utils.forms.get_card, AddCard.GET_CARD)
 
 # Подключение Машины Состояния для получения фото перевода
@@ -111,6 +115,11 @@ dp.message.register(utils.forms.get_school, AddTreasurer.GET_SCHOOL)
 dp.message.register(utils.forms.get_class, AddTreasurer.GET_CLASS)
 dp.message.register(utils.forms.get_letter, AddTreasurer.GET_LETTER)
 
+dp.message.register(utils.forms.get_new_name, GetNewName.NEW_NAME)
+dp.message.register(utils.forms.get_new_desc, GetNewDesc.NEW_DESC)
+dp.message.register(utils.forms.get_new_summ, GetNewSumm.NEW_SUMM)
+dp.message.register(utils.forms.get_new_date, GetNewDate.NEW_DATE)
+
 # Подключение Машины Состояния для получения ника для удаления казначея
 dp.message.register(utils.forms.del_treasurer, DelTreasurer.GET_NICKNAME)
 
@@ -119,16 +128,24 @@ dp.callback_query.register(callbacks.kazna_callbacks.must_func, F.data == "must"
 dp.callback_query.register(callbacks.kazna_callbacks.not_must_func, F.data == "not_must")
 
 # Регистрация колбеков для прокрутки целей вперед-назад (kazna)
-dp.callback_query.register(callbacks.kazna_callbacks.next_func, F.data == "next")
-dp.callback_query.register(callbacks.kazna_callbacks.back_func, F.data == "back")
+dp.callback_query.register(callbacks.kazna_callbacks.next_func, F.data.startswith("next_"))
+dp.callback_query.register(callbacks.kazna_callbacks.back_func, F.data.startswith("back_"))
 
 # Регистрация колбеков для прокрутки целей вперед-назад (user)
-dp.callback_query.register(callbacks.user_callbacks.next_task, F.data == "forv")
-dp.callback_query.register(callbacks.user_callbacks.back_task, F.data == "prev")
+dp.callback_query.register(callbacks.user_callbacks.next_task, F.data.startswith("forv"))
+dp.callback_query.register(callbacks.user_callbacks.back_task, F.data.startswith("prev"))
 dp.callback_query.register(callbacks.user_callbacks.pay, F.data == "pay")
 
 dp.callback_query.register(confirmtranz, F.data.startswith("confirmtranz_"))
 dp.callback_query.register(canseltranz, F.data.startswith("canseltranz_"))
+
+dp.callback_query.register(callbacks.kazna_callbacks.edit_name, F.data == "edit_name")
+dp.callback_query.register(callbacks.kazna_callbacks.edit_desc, F.data == "edit_description")
+dp.callback_query.register(callbacks.kazna_callbacks.edit_summ, F.data == "edit_price")
+dp.callback_query.register(callbacks.kazna_callbacks.edit_date, F.data == "edit_date")
+dp.callback_query.register(callbacks.kazna_callbacks.edit_must, F.data == "edit_must")
+dp.callback_query.register(callbacks.kazna_callbacks.new_must, F.data == "new_must")
+dp.callback_query.register(callbacks.kazna_callbacks.new_not_must, F.data == "new_not_must")
 
 # Регистрация колбеков для выбора класса ученика
 for school in get_school_list():
@@ -174,6 +191,67 @@ async def cmd_start(message: Message):
             reply_markup=greeting_admin)
     cursor.close()
     connection.commit()
+
+
+@dp.message(F.text == "Список участников")
+async def member_list(message: Message):
+    if data.functions.kazna_check(message.from_user.id):
+        connection = sqlite3.connect('db/database.db')
+        cursor = connection.cursor()
+        kd = cursor.execute(
+            f"SELECT school, class, letter FROM kazna WHERE username = '{message.from_user.id}'").fetchone()
+        # Получение всех участников
+        member_list = [i[0] for i in cursor.execute(f"SELECT username FROM users WHERE school = '{kd[0]}' "
+                                                    f"AND class = '{kd[1]}' AND letter = '{kd[2]}'").fetchall()]
+        nicks = [j.username for j in [await bot.get_chat(int(i)) for i in member_list if type(i) == int]]
+        text = f"👤 {hbold(f'Участники комитета')} 👤\n\n"
+
+        for name in nicks:
+            text += f"{nicks.index(name) + 1}. @{name}\n"
+
+        await message.answer(text, parse_mode="HTML", reply_markup=greeting_kazna)
+
+
+@dp.message(F.text == "История оплат")
+async def stats(message: Message):
+    if data.functions.kazna_check(message.from_user.id):
+        import callbacks.kazna_callbacks
+        callbacks.kazna_callbacks.stat_indx = 0
+
+        connection = sqlite3.connect('db/database.db')
+        cursor = connection.cursor()
+        kazna_data = cursor.execute(
+            f"SELECT school, class, letter FROM kazna WHERE username = '{message.from_user.id}'").fetchone()
+
+        my_tasks = cursor.execute(f"SELECT name, price, must FROM tasks WHERE "
+                                  f"school = '{kazna_data[0]}' AND class = '{kazna_data[1]}' AND letter = '{kazna_data[2]}'").fetchall()
+        text = f"""{hbold('Название:')} {my_tasks[0][0]}
+{hbold('Сумма (чел):')} {my_tasks[0][1]}
+{hbold('Обязательность:')} {my_tasks[0][2]}
+
+{hbold('Список оплативших:')}\n"""
+
+        user_id = [i[0] for i in cursor.execute(f"SELECT user_id FROM done WHERE name='{my_tasks[0][0]}' AND school = '{kazna_data[0]}' "
+                               f"AND class = '{kazna_data[1]}' AND letter = '{kazna_data[2]}'").fetchall()]
+
+        nicks = [j.username for j in [await bot.get_chat(int(i)) for i in user_id if type(i) == int]]
+
+        for name in nicks:
+            text += f"{nicks.index(name) + 1}. @{name}\n"
+
+        # Генерирование сообщения с первой целью
+        try:
+            await message.answer(text, reply_markup=my_tasks_ikb2, parse_mode="HTML")
+
+        except IndexError:
+            await message.answer("Список целей пуст. Создайте новую в главном меню",
+                                 reply_markup=greeting_kazna)
+
+        connection.commit()
+        cursor.close()
+    else:
+        await message.answer("Вы не указали реквизиты карты. Нажмите на кнопку *\"Привязать/Изменить карту\"*, и "
+                             "следуйте инструкциям", parse_mode="MARKDOWN")
 
 
 # Запуск процесса поллинга новых апдейтов

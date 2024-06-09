@@ -12,7 +12,7 @@ greeting_admin = ReplyKeyboardMarkup(keyboard=[
 
 greeting_kazna = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text="Создать цель"), KeyboardButton(text="Мои цели")],
-        [KeyboardButton(text="Привязать/Изменить карту")],
+        [KeyboardButton(text="Привязать/Изменить карту"), KeyboardButton(text="Статистика")],
         [KeyboardButton(text="Помощь")]
     ], resize_keyboard=True)
 
@@ -27,5 +27,12 @@ my_tasks_kb = ReplyKeyboardMarkup(keyboard=[
 
 user_stats = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text="История переводов 📜")],
+        [KeyboardButton(text="В меню")]
+    ], resize_keyboard=True)
+
+
+kazna_stats = ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text="Список участников")],
+        [KeyboardButton(text="История оплат")],
         [KeyboardButton(text="В меню")]
     ], resize_keyboard=True)

@@ -5,7 +5,7 @@ from aiogram import Router, F
 from aiogram.types import Message
 
 from data.functions import user_reg_check, generate_schools_ikb, get_school_list
-from keyboards.inline import tasks_ikb
+from keyboards.inline import tasks_ikb, user_history_ikb
 from keyboards.reply import user_stats
 
 dotenv.load_dotenv(dotenv.find_dotenv())
@@ -34,11 +34,11 @@ async def add_card(message: Message):
                     my_tasks.remove(task)
 
         try:
-            await message.answer(f"""Название: {my_tasks[0][0]}
-Описание: {my_tasks[0][1]}
-Сумма (чел): {my_tasks[0][2]} ₽
-Дедлайн: {my_tasks[0][3]}   
-Обязательность: {my_tasks[0][4]}""", reply_markup=tasks_ikb)
+            await message.answer(f"""*Название:* {my_tasks[0][0]}
+*Описание:* {my_tasks[0][1]}
+*Сумма (чел):* {my_tasks[0][2]} ₽
+*Дедлайн:* {my_tasks[0][3]}   
+*Обязательность:* {my_tasks[0][4]}""", parse_mode="MARKDOWN", reply_markup=tasks_ikb)
 
             connection.commit()
             cursor.close()
@@ -52,20 +52,36 @@ async def add_card(message: Message):
 
 @router.message(F.text == "Открыть статистику")
 async def stats(message: Message):
-    await message.answer("Выберите интересующий вас раздел", reply_markup=user_stats)
+    if user_reg_check(message.from_user.id):
+        await message.answer("Выберите интересующий вас раздел", reply_markup=user_stats)
 
 
 @router.message(F.text == "История переводов 📜")
 async def stats(message: Message):
-    connection = sqlite3.connect('db/database.db')
-    cursor = connection.cursor()
+    if user_reg_check(message.from_user.id):
+        connection = sqlite3.connect('db/database.db')
+        cursor = connection.cursor()
 
-    done_info = cursor.execute(f"SELECT name, school, class, letter FROM done WHERE user_id = '{message.from_user.id}'").fetchall()
-    tasks_info = []
-    for item in done_info:
-        tasks_info.append(cursor.execute(f"SELECT * FROM tasks WHERE name='{item[0]}' AND school='{item[1]}' AND class='{item[2]}' AND "
-                                   f"letter='{item[3]}'").fetchone())
-    print(tasks_info)
+        done_info = cursor.execute(f"SELECT name, school, class, letter FROM done WHERE user_id = '{message.from_user.id}'").fetchall()
+        tasks_info = []
+        for item in done_info:
+            data = cursor.execute(f"SELECT * FROM tasks WHERE name='{item[0]}' AND school='{item[1]}' AND class='{item[2]}' AND "
+                                       f"letter='{item[3]}'").fetchone()
+            if data:
+                tasks_info.append(data)
+            else:
+                tasks_info.append([item[0], "информация была удалена казначеем", "информация была удалена казначеем", "информация была удалена казначеем", "информация была удалена казначеем"])
 
-    connection.commit()
-    cursor.close()
+        connection.commit()
+        cursor.close()
+
+        if len(done_info) != 0:
+            await message.answer(f"""✅ *ЦЕЛЬ ОПЛАЧЕНА* ✅
+            
+*Название:* {tasks_info[0][0]}
+*Описание:* {tasks_info[0][1]}
+*Сумма (чел):* {tasks_info[0][2]} ₽
+*Дедлайн:* {tasks_info[0][3]}   
+*Обязательность:* {tasks_info[0][4]}""", parse_mode="MARKDOWN", reply_markup=user_history_ikb)
+        else:
+            await message.answer("Вы не оплатили ни одной цели")

@@ -2,6 +2,7 @@ import sqlite3
 import os
 import dotenv
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+import callbacks
 
 dotenv.load_dotenv(dotenv.find_dotenv())
 
@@ -11,9 +12,11 @@ def kazna_check(username):
     conn = sqlite3.connect('db/database.db')
     cursor = conn.cursor()
 
-    is_kaz = cursor.execute(f"SELECT username FROM kazna WHERE username = '{username}'").fetchone()
+    is_kaz = cursor.execute(f"SELECT username, card_number FROM kazna WHERE username = '{username}'").fetchone()
     cursor.close()
-    return is_kaz
+    if is_kaz:
+        if is_kaz[1] is not None:
+            return is_kaz
 
 
 def user_reg_check(username):
@@ -32,7 +35,7 @@ def admin_check(username):
 
 
 # Генерация сообщения для списка целей
-def generate_task(callback):
+def generate_task(callback, hist):
     connection = sqlite3.connect('db/database.db')
     cursor = connection.cursor()
     is_kazna = kazna_check(callback.from_user.id)
@@ -42,16 +45,33 @@ def generate_task(callback):
         my_tasks = cursor.execute(f"SELECT name, description, price, date_finish, must FROM tasks WHERE "
                                   f"school = '{data[0]}' AND class = '{data[1]}' AND letter = '{data[2]}'").fetchall()
     else:
-        data = cursor.execute(
-            f"SELECT school, class, letter FROM users WHERE username = '{callback.from_user.id}'").fetchone()
-        done_tasks = cursor.execute(f"SELECT name FROM done WHERE user_id='{callback.from_user.id}' AND "
-                                    f"school = '{data[0]}' AND class = '{data[1]}' AND letter = '{data[2]}'").fetchall()
-        my_tasks = cursor.execute(f"SELECT name, description, price, date_finish, must FROM tasks WHERE "
-                                  f"school = '{data[0]}' AND class = '{data[1]}' AND letter = '{data[2]}'").fetchall()
-        for done_task in done_tasks:
-            for task in my_tasks:
-                if done_task[0] == task[0]:
-                    my_tasks.remove(task)
+        if hist == "no":
+            data = cursor.execute(
+                f"SELECT school, class, letter FROM users WHERE username = '{callback.from_user.id}'").fetchone()
+            done_tasks = cursor.execute(f"SELECT name FROM done WHERE user_id='{callback.from_user.id}' AND "
+                                        f"school = '{data[0]}' AND class = '{data[1]}' AND letter = '{data[2]}'").fetchall()
+            my_tasks = cursor.execute(f"SELECT name, description, price, date_finish, must FROM tasks WHERE "
+                                      f"school = '{data[0]}' AND class = '{data[1]}' AND letter = '{data[2]}'").fetchall()
+            for done_task in done_tasks:
+                for task in my_tasks:
+                    if done_task[0] == task[0]:
+                        my_tasks.remove(task)
+        else:
+            done_info = cursor.execute(
+                f"SELECT name, school, class, letter FROM done WHERE user_id = '{callback.from_user.id}'").fetchall()
+            my_tasks = []
+
+            for item in done_info:
+                data = cursor.execute(
+                    f"SELECT * FROM tasks WHERE name='{item[0]}' AND school='{item[1]}' AND class='{item[2]}' AND "
+                    f"letter='{item[3]}'").fetchone()
+                if data:
+                    my_tasks.append(data)
+                else:
+                    my_tasks.append(
+                        (item[0], "информация была удалена казначеем", "информация была удалена казначеем",
+                         "информация была удалена казначеем", "информация была удалена казначеем"))
+
     connection.commit()
     cursor.close()
 
@@ -210,3 +230,34 @@ def generate_letters_ikb(school, class_, letters):
         )
 
     return InlineKeyboardMarkup(inline_keyboard=list1, resize_keyboard=True)
+
+
+def change_task(param, data, message):
+    indx = callbacks.kazna_callbacks.task_indx
+    task = generate_task(message, "no")
+    connection = sqlite3.connect('db/database.db')
+    cursor = connection.cursor()
+    kd = cursor.execute(f"SELECT school, class, letter FROM kazna WHERE username = '{message.from_user.id}'").fetchone()
+
+    match param:
+        case "name":
+            cursor.execute(f"UPDATE tasks SET name='{data['name']}' WHERE school = '{kd[0]}' AND class = '{kd[1]}' "
+                           f"AND letter = '{kd[2]}' AND name='{task[indx][0]}'")
+
+        case "desc":
+            cursor.execute(
+                f"UPDATE tasks SET description='{data['desc']}' WHERE school = '{kd[0]}' AND class = '{kd[1]}' "
+                f"AND letter = '{kd[2]}' AND name='{task[indx][0]}'")
+
+        case "summ":
+            cursor.execute(
+                f"UPDATE tasks SET price='{data['summ']}' WHERE school = '{kd[0]}' AND class = '{kd[1]}' "
+                f"AND letter = '{kd[2]}' AND name='{task[indx][0]}'")
+
+        case "date":
+            cursor.execute(
+                f"UPDATE tasks SET date_finish='{data['date']}' WHERE school = '{kd[0]}' AND class = '{kd[1]}' "
+                f"AND letter = '{kd[2]}' AND name='{task[indx][0]}'")
+
+    connection.commit()
+    cursor.close()
