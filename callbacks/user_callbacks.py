@@ -3,7 +3,8 @@ import sqlite3
 from aiogram import types
 from aiogram.fsm.context import FSMContext
 
-from data.functions import get_classes_list, generate_classes_ikb, generate_letters_ikb, get_letters_list, generate_task
+from data.functions import get_classes_list, generate_classes_ikb, generate_letters_ikb, get_letters_list, \
+    generate_task, generate_schools_ikb, get_school_list
 from keyboards.inline import tasks_ikb, user_history_ikb
 from keyboards.reply import greeting_user, back
 from utils.forms import GetTransferPhoto
@@ -11,12 +12,14 @@ from utils.forms import GetTransferPhoto
 task_indx = 0
 hist_indx = 0
 name = ""
+school_const = ""
 
 
 async def choose_class(callback: types.CallbackQuery):
-    school = callback.data
+    global school_const
+    school_const = callback.data
     await callback.message.edit_text("Выберите класс, в котором учится ваш ребенок",
-                                     reply_markup=generate_classes_ikb(school, get_classes_list(school)))
+                                     reply_markup=generate_classes_ikb(school_const, get_classes_list(school_const)))
 
 
 async def choose_letter(callback: types.CallbackQuery):
@@ -40,7 +43,7 @@ async def class_confirmed(callback: types.CallbackQuery):
     
 *Школа:* {school}
 *Класс:* {class_}
-*Буква:* {letter}""", parce_mode="MARKDOWN", reply_markup=greeting_user)
+*Буква:* {letter}""", parse_mode="MARKDOWN", reply_markup=greeting_user)
 
 
 async def next_task(callback: types.CallbackQuery):
@@ -155,3 +158,16 @@ async def pay(callback: types.CallbackQuery, state: FSMContext):
 
     name = message_data.split('Название: ')[1].split('Описание:')[0]
     await state.set_state(GetTransferPhoto.GET_PHOTO)
+
+
+async def back_to_schools(callback: types.CallbackQuery):
+    await callback.message.answer("Выберите школу, в которой учится ваш ребенок",
+                         reply_markup=generate_schools_ikb(get_school_list()))
+    await callback.message.delete()
+
+
+async def back_to_classes(callback: types.CallbackQuery):
+    global school_const
+    await callback.message.answer("Выберите класс, в котором учится ваш ребенок",
+                                     reply_markup=generate_classes_ikb(school_const, get_classes_list(school_const)))
+    await callback.message.delete()

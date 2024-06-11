@@ -86,7 +86,6 @@ async def canseltranz(callback: types.CallbackQuery):
     await callback.message.answer("Вы отказали в подтверждении перевода!")
     await bot.send_message(user_id, cansel_tranz, reply_markup=greeting_user)
 
-
 dotenv.load_dotenv(dotenv.find_dotenv())
 
 # Инициализация бота и подключение роутеров
@@ -155,6 +154,8 @@ for school in get_school_list():
         for letter in get_letters_list(school, class_):
             dp.callback_query.register(callbacks.user_callbacks.class_confirmed, F.data == f"{school}_{class_}_{letter}")
 
+dp.callback_query.register(callbacks.user_callbacks.back_to_schools, F.data == "backk_to_schools")
+dp.callback_query.register(callbacks.user_callbacks.back_to_classes, F.data == "backk_to_classes")
 
 # Хэндлер на команду /start
 @dp.message(CommandStart())
@@ -165,7 +166,7 @@ async def cmd_start(message: Message):
     kazna_list = [i[0] for i in cursor.execute("SELECT username FROM kazna").fetchall()]
 
     # Если не от казначея
-    if message.from_user.id not in kazna_list and message.from_user.id != os.getenv("ADMIN_USERNAME"):
+    if message.from_user.id not in kazna_list and message.from_user.id != int(os.getenv("ADMIN_USERNAME")):
         not_first_time = cursor.execute("SELECT username FROM users WHERE username=?",
                                         (message.from_user.id,)).fetchone()
         if not_first_time:

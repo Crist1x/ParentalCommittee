@@ -94,6 +94,9 @@ async def delete_task(message: Message):
         connection.commit()
         cursor.close()
         await message.answer("Цель была успешно удалена", reply_markup=keyboards.reply.greeting_kazna)
+    else:
+        await message.answer("Вы не указали реквизиты карты. Нажмите на кнопку *\"Привязать/Изменить карту\"*, и "
+                             "следуйте инструкциям", parse_mode="MARKDOWN")
 
 
 # Хендлер возвращения в меню
@@ -120,12 +123,18 @@ async def menu_back(message: Message):
 async def edit_task(message: Message):
     if kazna_check(message.from_user.id):
         await message.answer("Выберите параметр для редактирования:", reply_markup=keyboards.inline.edit_task_ikb)
+    else:
+        await message.answer("Вы не указали реквизиты карты. Нажмите на кнопку *\"Привязать/Изменить карту\"*, и "
+                             "следуйте инструкциям", parse_mode="MARKDOWN")
 
 
 @router.message(F.text == "Статистика")
 async def stats(message: Message):
     if kazna_check(message.from_user.id):
         await message.answer("Выберите интересующий вас раздел", reply_markup=keyboards.reply.kazna_stats)
+    else:
+        await message.answer("Вы не указали реквизиты карты. Нажмите на кнопку *\"Привязать/Изменить карту\"*, и "
+                             "следуйте инструкциям", parse_mode="MARKDOWN")
 
 
 # Список участников находится в файле main

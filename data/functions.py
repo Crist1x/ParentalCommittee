@@ -15,7 +15,7 @@ def kazna_check(username):
     is_kaz = cursor.execute(f"SELECT username, card_number FROM kazna WHERE username = '{username}'").fetchone()
     cursor.close()
     if is_kaz:
-        if is_kaz[1] is not None:
+        if is_kaz[1] is not None and is_kaz[1] != '':
             return is_kaz
 
 
@@ -30,7 +30,8 @@ def user_reg_check(username):
 
 # Проверка на казначея
 def admin_check(username):
-    if os.getenv("ADMIN_USERNAME") == username:
+    print(username)
+    if int(os.getenv("ADMIN_USERNAME")) == int(username):
         return True
 
 
@@ -102,11 +103,6 @@ def generate_schools_ikb(schools):
                     text=schools[i+1],
                     callback_data=schools[i+1])
             ])
-        list1.append([
-                InlineKeyboardButton(
-                    text="Скрыть",
-                    callback_data="hide_schools")]
-        )
     else:
         for i in range(0, (len(schools) - 1) // 2, 2):
             list1.append([
@@ -120,10 +116,7 @@ def generate_schools_ikb(schools):
         list1.append([
             InlineKeyboardButton(
                 text=schools[-1],
-                callback_data=schools[-1]),
-            InlineKeyboardButton(
-                text="Скрыть",
-                callback_data="hide_schools")
+                callback_data=schools[-1])
             ]
         )
 
@@ -157,7 +150,7 @@ def generate_classes_ikb(school, classes):
         list1.append([
                 InlineKeyboardButton(
                     text="Назад",
-                    callback_data="back_to_schools")]
+                    callback_data="backk_to_schools")]
         )
     else:
         for i in range(0, (len(classes) - 1) // 2, 2):
@@ -175,7 +168,7 @@ def generate_classes_ikb(school, classes):
                 callback_data=f"{school}_{classes[-1]}"),
             InlineKeyboardButton(
                 text="Назад",
-                callback_data="back_to_schools")
+                callback_data="backk_to_schools")
             ]
         )
 
@@ -207,7 +200,7 @@ def generate_letters_ikb(school, class_, letters):
         list1.append([
                 InlineKeyboardButton(
                     text="Назад",
-                    callback_data="back_to_classes")]
+                    callback_data="backk_to_classes")]
         )
     else:
         for i in range(0, (len(letters) - 1) // 2, 2):
@@ -225,7 +218,7 @@ def generate_letters_ikb(school, class_, letters):
                 callback_data=f"{school}_{class_}_{letters[-1]}"),
             InlineKeyboardButton(
                 text="Назад",
-                callback_data="back_to_classes")
+                callback_data="backk_to_classes")
             ]
         )
 
