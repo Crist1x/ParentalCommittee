@@ -11,6 +11,7 @@ from keyboards.inline import my_tasks_ikb
 from utils.forms import AddCard, AddTask
 from data.functions import kazna_check
 import dotenv
+import aioschedule, time
 
 dotenv.load_dotenv(dotenv.find_dotenv())
 router = Router()

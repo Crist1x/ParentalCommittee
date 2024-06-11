@@ -1,7 +1,9 @@
 import asyncio
+import datetime
 import logging
 import os
 import sys
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import dotenv
 from aiogram import Bot, Dispatcher, F, types
@@ -255,9 +257,31 @@ async def stats(message: Message):
                              "следуйте инструкциям", parse_mode="MARKDOWN")
 
 
+async def checking():
+    connection = sqlite3.connect('db/database.db')
+    cursor = connection.cursor()
+
+    current_date = datetime.datetime.now()
+    tomorrow = (current_date + datetime.timedelta(days=1)).strftime('%d.%m.%Y')
+
+    tasks_list = cursor.execute(f"SELECT name, school, class, letter FROM tasks WHERE date_finish='{tomorrow}'").fetchall()
+    for obj in tasks_list:
+        users_list = cursor.execute(f"SELECT username FROM users WHERE school = '{obj[1]}' "
+                               f"AND class = '{obj[2]}' AND letter = '{obj[3]}'").fetchall()
+        for user in users_list:
+            await bot.send_message(chat_id=user[0], text=f"Не забудьте оплатить цель \"{obj[0]}\". "
+                                                         f"Сегодня последний день оплаты")
+
+    connection.commit()
+    cursor.close()
+
+
 # Запуск процесса поллинга новых апдейтов
 async def main():
     try:
+        scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
+        scheduler.add_job(checking, trigger='interval', hours=6)
+        scheduler.start()
         await bot.delete_webhook(drop_pending_updates=True)
         await dp.start_polling(bot)
     finally:
