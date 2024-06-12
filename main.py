@@ -268,8 +268,11 @@ async def checking():
     for obj in tasks_list:
         users_list = cursor.execute(f"SELECT username FROM users WHERE school = '{obj[1]}' "
                                f"AND class = '{obj[2]}' AND letter = '{obj[3]}'").fetchall()
+        done_list = [i[0] for i in cursor.execute(f"SELECT username FROM done WHERE school = '{obj[1]}' "
+                               f"AND class = '{obj[2]}' AND letter = '{obj[3]}' AND name='{obj[0]}'").fetchall()]
         for user in users_list:
-            await bot.send_message(chat_id=user[0], text=f"Не забудьте оплатить цель \"{obj[0]}\". "
+            if user not in done_list:
+                await bot.send_message(chat_id=user[0], text=f"Не забудьте оплатить цель \"{obj[0]}\". "
                                                          f"Сегодня последний день оплаты")
 
     connection.commit()
